@@ -9,7 +9,7 @@ import cv2
 
 def now():
     return time.perf_counter()
-    
+
 class FPS: # To measure the number of frame per second
     def __init__(self, mean_nb_frames=10):
         self.nbf = -1
@@ -18,7 +18,7 @@ class FPS: # To measure the number of frame per second
         self.stop = 0
         self.local_start = 0
         self.mean_nb_frames = mean_nb_frames
-        
+
     def update(self):
         if self.nbf%self.mean_nb_frames == 0:
             if self.start != 0:
@@ -26,12 +26,12 @@ class FPS: # To measure the number of frame per second
                 self.fps = self.mean_nb_frames/(self.stop-self.local_start)
                 self.local_start = self.stop
             else :
-                self.start = self.local_start = now()    
+                self.start = self.local_start = now()
         self.nbf+=1
-    
+
     def get(self):
         return self.fps
-    
+
     def get_global(self):
         if self.stop == 0: self.stop = now()
         return self.nbf/(self.stop-self.start)

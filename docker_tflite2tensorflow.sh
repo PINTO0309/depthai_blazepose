@@ -10,5 +10,5 @@ docker run -it --rm \
     -e XDG_RUNTIME_DIR=$XDG_RUNTIME_DIR \
     -e DISPLAY=$DISPLAY \
     --privileged \
-    pinto0309/tflite2tensorflow:latest bash 
+    pinto0309/tflite2tensorflow:latest bash
 

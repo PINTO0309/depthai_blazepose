@@ -3,18 +3,18 @@ import numpy as np
 import open3d as o3d
 from o3d_utils import create_segment, create_grid
 
-# LINES_BODY is used when drawing the skeleton onto the source image. 
+# LINES_BODY is used when drawing the skeleton onto the source image.
 # Each variable is a list of continuous lines.
 # Each line is a list of keypoints as defined at https://google.github.io/mediapipe/solutions/pose.html#pose-landmark-model-blazepose-ghum-3d
-LINES_BODY = [[28,30,32,28,26,24,12,11,23,25,27,29,31,27], 
+LINES_BODY = [[28,30,32,28,26,24,12,11,23,25,27,29,31,27],
                 [23,24],
-                [22,16,18,20,16,14,12], 
+                [22,16,18,20,16,14,12],
                 [21,15,17,19,15,13,11],
                 [8,6,5,4,0,1,2,3,7],
                 [10,9],
                 ]
 
-# LINE_MESH_BODY and COLORS_BODY are used when drawing the skeleton in 3D. 
+# LINE_MESH_BODY and COLORS_BODY are used when drawing the skeleton in 3D.
 rgb = {"right":(0,1,0), "left":(1,0,0), "middle":(1,1,0)}
 LINE_MESH_BODY = [[9,10],[4,6],[1,3],
                     [12,14],[14,16],[16,20],[20,18],[18,16],
@@ -48,7 +48,7 @@ class BlazeposeRenderer:
         if self.show_3d:
 
             self.vis3d = o3d.visualization.Visualizer()
-            self.vis3d.create_window() 
+            self.vis3d.create_window()
             opt = self.vis3d.get_render_option()
             opt.background_color = np.asarray([0, 0, 0])
             z = min(pose.img_h, pose.img_w)/3
@@ -64,17 +64,17 @@ class BlazeposeRenderer:
             self.output = None
         else:
             fourcc = cv2.VideoWriter_fourcc(*"MJPG")
-            self.output = cv2.VideoWriter(output,fourcc,pose.video_fps,(pose.img_w, pose.img_h)) 
+            self.output = cv2.VideoWriter(output,fourcc,pose.video_fps,(pose.img_w, pose.img_h))
 
     def draw_landmarks(self, body):
         if self.show_rot_rect:
             cv2.polylines(self.frame, [np.array(body.rect_points)], True, (0,255,255), 2, cv2.LINE_AA)
-        if self.show_landmarks:                
+        if self.show_landmarks:
             list_connections = LINES_BODY
             lines = [np.array([body.landmarks[point,:2] for point in line]) for line in list_connections]
             # lines = [np.array([body.landmarks_padded[point,:2] for point in line]) for line in list_connections]
             cv2.polylines(self.frame, lines, False, (255, 180, 90), 2, cv2.LINE_AA)
-            
+
             # for i,x_y in enumerate(body.landmarks_padded[:,:2]):
             for i,x_y in enumerate(body.landmarks[:self.pose.nb_kps,:2]):
                 if i > 10:
@@ -100,12 +100,12 @@ class BlazeposeRenderer:
                     if line: self.vis3d.add_geometry(line, reset_bounding_box=False)
                 self.vis3d.poll_events()
                 self.vis3d.update_renderer()
-                
+
 
         if self.show_score:
             h, w = self.frame.shape[:2]
-            cv2.putText(self.frame, f"Landmark score: {body.lm_score:.2f}", 
-                        (20, h-60), 
+            cv2.putText(self.frame, f"Landmark score: {body.lm_score:.2f}",
+                        (20, h-60),
                         cv2.FONT_HERSHEY_PLAIN, 2, (255,255,0), 2)
 
 
@@ -114,7 +114,7 @@ class BlazeposeRenderer:
         if body:
             self.draw_landmarks(body)
         return self.frame
-    
+
     def exit(self):
         if self.output:
             self.output.release()
@@ -125,7 +125,7 @@ class BlazeposeRenderer:
         cv2.imshow("Blazepose", self.frame)
         if self.output:
             self.output.write(self.frame)
-        key = cv2.waitKey(delay) 
+        key = cv2.waitKey(delay)
         if key == 32:
             # Pause on space bar
             cv2.waitKey(0)
@@ -138,5 +138,4 @@ class BlazeposeRenderer:
         elif key == ord('f'):
             self.show_fps = not self.show_fps
         return key
-        
-            
+

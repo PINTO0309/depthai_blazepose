@@ -54,7 +54,7 @@ class Body:
         rotation : rotation angle of rotated bounding rectangle with y-axis in radian
         rect_x_center_a, rect_y_center_a : center coordinates of the rotated bounding rectangle, in pixels in the squared image
         rect_w, rect_h : width and height of the rotated bounding rectangle, in pixels in the squared image
-        rect_points : list of the 4 points coordinates of the rotated bounding rectangle, in pixels 
+        rect_points : list of the 4 points coordinates of the rotated bounding rectangle, in pixels
                 expressed in the squared image during processing,
                 expressed in the original rectangular image when returned to the user
         lm_score: global landmark score
@@ -122,7 +122,7 @@ def generate_anchors(options):
                     scales.append(sqrt(scale * scale_next))
                     aspect_ratios.append(options.interpolated_scale_aspect_ratio)
             last_same_stride_layer += 1
-        
+
         for i,r in enumerate(aspect_ratios):
             ratio_sqrts = sqrt(r)
             anchor_height.append(scales[i] / ratio_sqrts)
@@ -147,14 +147,14 @@ def generate_anchors(options):
                         # new_anchor.w = anchor_width[anchor_id]
                         # new_anchor.h = anchor_height[anchor_id]
                     anchors.append(new_anchor)
-        
+
         layer_id = last_same_stride_layer
     return np.array(anchors)
 
 def generate_blazepose_anchors():
     # https://github.com/google/mediapipe/blob/master/mediapipe/modules/pose_detection/pose_detection_cpu.pbtxt
     anchor_options = SSDAnchorOptions(
-                                num_layers=5, 
+                                num_layers=5,
                                 min_scale=0.1484375,
                                 max_scale=0.75,
                                 input_size_height=224,
@@ -250,13 +250,13 @@ def decode_bboxes(score_thresh, scores, bboxes, anchors, best_only=False):
         if det_scores.size == 0: return bodies
         det_bboxes = bboxes[detection_mask]
         det_anchors = anchors[detection_mask]
-    
+
     scale = 224 # x_scale, y_scale, w_scale, h_scale
 
     # cx, cy, w, h = bboxes[i,:4]
-    # cx = cx * anchor.w / wi + anchor.x_center 
+    # cx = cx * anchor.w / wi + anchor.x_center
     # cy = cy * anchor.h / hi + anchor.y_center
-    # lx = lx * anchor.w / wi + anchor.x_center 
+    # lx = lx * anchor.w / wi + anchor.x_center
     # ly = ly * anchor.h / hi + anchor.y_center
     det_bboxes = det_bboxes* np.tile(det_anchors[:,2:4], 6) / scale + np.tile(det_anchors[:,0:2],6)
     # w = w * anchor.w / wi (in the prvious line, we add anchor.x_center and anchor.y_center to w and h, we need to substract them now)
@@ -281,7 +281,7 @@ def non_max_suppression(bodies, nms_thresh):
     # boxes = [ [x, y, w, h], ...] with x, y, w, h of type int
     # Currently, x, y, w, h are float between 0 and 1, so we arbitrarily multiply by 1000 and cast to int
     # boxes = [r.box for r in bodies]
-    boxes = [ [int(x*1000) for x in r.pd_box] for r in bodies]        
+    boxes = [ [int(x*1000) for x in r.pd_box] for r in bodies]
     scores = [r.pd_score for r in bodies]
     indices = cv2.dnn.NMSBoxes(boxes, scores, 0, nms_thresh)
     return [bodies[i[0]] for i in indices]
@@ -329,12 +329,12 @@ def detections_to_rect(body, kp_pair=[0,1]):
     #     }
     #   }
     # }
-    
+
     target_angle = pi * 0.5 # 90 = pi/2
-        
+
     # AlignmentPointsRectsCalculator : https://github.com/google/mediapipe/blob/master/mediapipe/calculators/util/alignment_points_to_rects_calculator.cc
-    x_center, y_center = body.pd_kps[kp_pair[0]] 
-    x_scale, y_scale = body.pd_kps[kp_pair[1]] 
+    x_center, y_center = body.pd_kps[kp_pair[0]]
+    x_scale, y_scale = body.pd_kps[kp_pair[1]]
     # Bounding box size as double distance from center to scale point.
     box_size = sqrt((x_scale-x_center)**2 + (y_scale-y_center)**2) * 2
     body.rect_w = box_size
@@ -344,7 +344,7 @@ def detections_to_rect(body, kp_pair=[0,1]):
 
     rotation = target_angle - atan2(-(y_scale - y_center), x_scale - x_center)
     body.rotation = normalize_radians(rotation)
-        
+
 def rotated_rect_to_points(cx, cy, w, h, rotation):
     b = cos(rotation) * 0.5
     a = sin(rotation) * 0.5
@@ -395,8 +395,8 @@ def rect_transformation(body, w, h, scale = 1.25):
         body.rect_x_center_a = (body.rect_x_center + width * shift_x) * w
         body.rect_y_center_a = (body.rect_y_center + height * shift_y) * h
     else:
-        x_shift = (w * width * shift_x * cos(rotation) - h * height * shift_y * sin(rotation)) 
-        y_shift = (w * width * shift_x * sin(rotation) + h * height * shift_y * cos(rotation)) 
+        x_shift = (w * width * shift_x * cos(rotation) - h * height * shift_y * sin(rotation))
+        y_shift = (w * width * shift_x * sin(rotation) + h * height * shift_y * cos(rotation))
         body.rect_x_center_a = body.rect_x_center*w + x_shift
         body.rect_y_center_a = body.rect_y_center*h + y_shift
 
@@ -420,7 +420,7 @@ def distance(a, b):
 
 def angle(a, b, c):
     # https://stackoverflow.com/questions/35176451/python-code-to-calculate-angle-between-three-point-using-their-3d-coordinates
-    # a, b and c : points as np.array([x, y, z]) 
+    # a, b and c : points as np.array([x, y, z])
     ba = a - b
     bc = c - b
     cosine_angle = np.dot(ba, bc) / (np.linalg.norm(ba) * np.linalg.norm(bc))
@@ -552,14 +552,14 @@ def find_isp_scale_params(size, is_height=True):
     # We want size >= 288
     if size < 288:
         size = 288
-    
+
     # We are looking for the list on integers that are divisible by 16 and
     # that can be written like n/d where n <= 16 and d <= 63
     if is_height:
-        reference = 1080 
+        reference = 1080
         other = 1920
     else:
-        reference = 1920 
+        reference = 1920
         other = 1080
     size_candidates = {}
     for s in range(288,reference,16):
@@ -568,7 +568,7 @@ def find_isp_scale_params(size, is_height=True):
         d = reference//f
         if n <= 16 and d <= 63 and int(round(other * n / d) % 2 == 0):
             size_candidates[s] = (n, d)
-            
+
     # What is the candidate size closer to 'size' ?
     min_dist = -1
     for s in size_candidates:

@@ -6,18 +6,18 @@ import numpy as np
 
 def calculate_zy_rotation_for_arrow(v):
     """
-    Calculates the rotations required to go from the vector v to the 
-    z axis vector. The first rotation that is 
+    Calculates the rotations required to go from the vector v to the
+    z axis vector. The first rotation that is
     calculated is over the z axis. This will leave the vector v on the
-    XZ plane. Then, the rotation over the y axis. 
+    XZ plane. Then, the rotation over the y axis.
 
     Returns the angles of rotation over axis z and y required to
     get the vector v into the same orientation as axis z
 
     Args:
-        - v (): 
+        - v ():
     """
-    # Rotation over z axis 
+    # Rotation over z axis
     gamma = np.arctan(v[1]/v[0])
     Rz = np.array([[np.cos(gamma),-np.sin(gamma),0],
                    [np.sin(gamma),np.cos(gamma),0],
@@ -55,7 +55,7 @@ def create_segment(a, b, radius=0.05, color=(1,1,0), resolution=20):
     b = np.array(b)
     T = np.array([[1, 0, 0, 0], [0, 1, 0, 0], [0, 0, 1, 0], [0, 0, 0, 1]])
     T[:3, -1] = a
-    v = b-a 
+    v = b-a
 
     height = np.linalg.norm(v)
     if height == 0: return None
@@ -84,7 +84,7 @@ def create_grid(p0, p1, p2, p3, ni1, ni2, color=(0,0,0)):
     p1 = np.array(p1)
     p2 = np.array(p2)
     p3 = np.array(p3)
-    
+
     vertices = [p0, p1, p2, p3]
     lines = [[0,1],[0,3],[1,2],[2,3]]
     for i in range(1,ni1):
