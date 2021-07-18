@@ -26,7 +26,7 @@ class BlazeposeDepthai:
     """
     Blazepose body pose detector
     Arguments:
-    - input_src: frame source, 
+    - input_src: frame source,
                     - "rgb" or None: OAK* internal color camera,
                     - "rgb_laconic": same as "rgb" but without sending the frames to the host,
                     - a file path of an image or a video,
@@ -37,7 +37,7 @@ class BlazeposeDepthai:
                     - None or "full": the default blob file LANDMARK_MODEL_FULL,
                     - "lite": the default blob file LANDMARK_MODEL_LITE,
                     - "831": the full model from previous version of mediapipe (0.8.3.1) LANDMARK_MODEL_FULL_0831,
-                    - a path of a blob file. 
+                    - a path of a blob file.
     - lm_score_thresh : confidence score to determine whether landmarks prediction is reliable (a float between 0 and 1).
     - crop : boolean which indicates if square cropping is done or not
     - smoothing: boolean which indicates if smoothing filtering is applied
@@ -51,12 +51,12 @@ class BlazeposeDepthai:
     - internal_fps : when using the internal color camera as input source, set its FPS to this value (calling setFps()).
     - internal_frame_height : when using the internal color camera, set the frame height (calling setIspScale()).
                                 The width is calculated accordingly to height and depends on value of 'crop'
-    - stats : boolean, when True, display some statistics when exiting.   
-    - trace: boolean, when True print some debug messages   
-    - force_detection:     boolean, force person detection on every frame (never use landmarks from previous frame to determine ROI)           
+    - stats : boolean, when True, display some statistics when exiting.
+    - trace: boolean, when True print some debug messages
+    - force_detection:     boolean, force person detection on every frame (never use landmarks from previous frame to determine ROI)
     """
     def __init__(self, input_src="rgb",
-                pd_model=None, 
+                pd_model=None,
                 pd_score_thresh=0.5,
                 lm_model=None,
                 lm_score_thresh=0.7,
@@ -70,7 +70,7 @@ class BlazeposeDepthai:
                 trace=False,
                 force_detection=False
                 ):
-        
+
         self.pd_model = pd_model if pd_model else POSE_DETECTION_MODEL
         print(f"Pose detection blob file : {self.pd_model}")
         self.rect_transf_scale = 1.25
@@ -84,15 +84,15 @@ class BlazeposeDepthai:
         else:
             self.lm_model = lm_model
         print(f"Landmarks using blob file : {self.lm_model}")
-        
+
         self.pd_score_thresh = pd_score_thresh
         self.lm_score_thresh = lm_score_thresh
         self.smoothing = smoothing
-        self.crop = crop 
-        self.internal_fps = internal_fps     
+        self.crop = crop
+        self.internal_fps = internal_fps
         self.stats = stats
         self.force_detection = force_detection
-        
+
         if input_src == None or input_src == "rgb" or input_src == "rgb_laconic":
             # Note that here (in Host mode), specifying "rgb_laconic" has no effect
             # Color camera frame is systematically transferred to the host
@@ -102,7 +102,7 @@ class BlazeposeDepthai:
                     self.internal_fps = 10
                 elif "full" in str(lm_model):
                     self.internal_fps = 8
-                else: 
+                else:
                     self.internal_fps = 13
             else:
                 self.internal_fps = internal_fps
@@ -155,16 +155,16 @@ class BlazeposeDepthai:
             if self.pad_w: print("Padding on width :", self.pad_w)
             self.pad_h = max((self.frame_size - self.img_h) // 2, 0)
             if self.pad_h: print("Padding on height :", self.pad_h)
-            
-            
+
+
             print(f"Frame working size: {self.img_w}x{self.img_h}")
 
         self.nb_kps = 33 # Number of "viewable" keypoints
 
         if self.smoothing:
             self.filter = mpu.LandmarksSmoothingFilter(filter_window_size, filter_velocity_scale, (self.nb_kps, 3))
-    
-        # Create SSD anchors 
+
+        # Create SSD anchors
         self.anchors = mpu.generate_blazepose_anchors()
         self.nb_anchors = self.anchors.shape[0]
         print(f"{self.nb_anchors} anchors have been created")
@@ -175,7 +175,7 @@ class BlazeposeDepthai:
         self.device = dai.Device(self.create_pipeline())
         print("Pipeline started")
 
-        # Define data queues 
+        # Define data queues
         if self.input_type == "rgb":
             self.q_video = self.device.getOutputQueue(name="cam_out", maxSize=1, blocking=False)
             self.q_pre_pd_manip_cfg = self.device.getInputQueue(name="pre_pd_manip_cfg")
@@ -184,7 +184,7 @@ class BlazeposeDepthai:
         self.q_pd_out = self.device.getOutputQueue(name="pd_out", maxSize=4, blocking=True)
         self.q_lm_in = self.device.getInputQueue(name="lm_in")
         self.q_lm_out = self.device.getOutputQueue(name="lm_out", maxSize=4, blocking=True)
-            
+
 
         self.fps = FPS()
 
@@ -209,7 +209,7 @@ class BlazeposeDepthai:
         # Start defining a pipeline
         pipeline = dai.Pipeline()
         pipeline.setOpenVINOVersion(version = dai.OpenVINO.Version.VERSION_2021_3)
-        
+
 
         if self.input_type == "rgb":
             # ColorCamera
@@ -224,26 +224,26 @@ class BlazeposeDepthai:
             if self.crop:
                 cam.setVideoSize(self.frame_size, self.frame_size)
                 cam.setPreviewSize(self.frame_size, self.frame_size)
-            else: 
+            else:
                 cam.setVideoSize(self.img_w, self.img_h)
                 cam.setPreviewSize(self.img_w, self.img_h)
-            
+
             cam_out = pipeline.createXLinkOut()
             cam_out.setStreamName("cam_out")
             cam.video.link(cam_out.input)
 
             # Define pose detection pre processing (resize preview to (self.pd_input_length, self.pd_input_length))
             print("Creating Pose Detection pre processing image manip...")
-            pre_pd_manip = pipeline.create(dai.node.ImageManip)
+            pre_pd_manip = pipeline.createImageManip()
             pre_pd_manip.setMaxOutputFrameSize(self.pd_input_length*self.pd_input_length*3)
             pre_pd_manip.setWaitForConfigInput(True)
             pre_pd_manip.inputImage.setQueueSize(1)
             pre_pd_manip.inputImage.setBlocking(False)
             cam.preview.link(pre_pd_manip.inputImage)
 
-            pre_pd_manip_cfg_in = pipeline.create(dai.node.XLinkIn)
+            pre_pd_manip_cfg_in = pipeline.createXLinkIn()
             pre_pd_manip_cfg_in.setStreamName("pre_pd_manip_cfg")
-            pre_pd_manip_cfg_in.out.link(pre_pd_manip.inputConfig)   
+            pre_pd_manip_cfg_in.out.link(pre_pd_manip.inputConfig)
 
         # Define pose detection model
         print("Creating Pose Detection Neural Network...")
@@ -252,7 +252,7 @@ class BlazeposeDepthai:
         # Increase threads for detection
         # pd_nn.setNumInferenceThreads(2)
         # Specify that network takes latest arriving frame in non-blocking manner
-        # Pose detection input                 
+        # Pose detection input
         if self.input_type == "rgb":
             pre_pd_manip.out.link(pd_nn.input)
         else:
@@ -264,10 +264,10 @@ class BlazeposeDepthai:
         pd_out = pipeline.createXLinkOut()
         pd_out.setStreamName("pd_out")
         pd_nn.out.link(pd_out.input)
-        
+
 
         # Define landmark model
-        print("Creating Landmark Neural Network...")          
+        print("Creating Landmark Neural Network...")
         lm_nn = pipeline.createNeuralNetwork()
         lm_nn.setBlobPath(str(Path(self.lm_model).resolve().absolute()))
         lm_nn.setNumInferenceThreads(1)
@@ -282,11 +282,11 @@ class BlazeposeDepthai:
         lm_out = pipeline.createXLinkOut()
         lm_out.setStreamName("lm_out")
         lm_nn.out.link(lm_out.input)
-            
-        print("Pipeline created.")
-        return pipeline        
 
-        
+        print("Pipeline created.")
+        return pipeline
+
+
     def pd_postprocess(self, inference):
         scores = np.array(inference.getLayerFp16("Identity_1"), dtype=np.float16) # 2254
         bboxes = np.array(inference.getLayerFp16("Identity"), dtype=np.float16).reshape((self.nb_anchors,12)) # 2254x12
@@ -299,10 +299,10 @@ class BlazeposeDepthai:
         mpu.detections_to_rect(body)
         mpu.rect_transformation(body, self.frame_size, self.frame_size, self.rect_transf_scale)
         return body
-   
+
     def lm_postprocess(self, body, inference):
         body.lm_score = inference.getLayerFp16("output_poseflag")[0]
-        if body.lm_score > self.lm_score_thresh:  
+        if body.lm_score > self.lm_score_thresh:
 
             lm_raw = np.array(inference.getLayerFp16("ld_3d")).reshape(-1,5)
             # Each keypoint have 5 information:
@@ -330,7 +330,7 @@ class BlazeposeDepthai:
             lm_raw[:,:3] /= self.lm_input_length
             # Apply sigmoid on visibility and presence (if used later)
             # lm_raw[:,3:5] = 1 / (1 + np.exp(-lm_raw[:,3:5]))
-            
+
             # body.norm_landmarks contains the normalized ([0:1]) 3D coordinates of landmarks in the square rotated body bounding box
             body.norm_landmarks = lm_raw[:,:3]
             # Now calculate body.landmarks = the landmarks in the image coordinate system (in pixel) (body.landmarks)
@@ -338,7 +338,7 @@ class BlazeposeDepthai:
             dst = np.array([ (x, y) for x,y in body.rect_points[1:]], dtype=np.float32) # body.rect_points[0] is left bottom point and points going clockwise!
             mat = cv2.getAffineTransform(src, dst)
             lm_xy = np.expand_dims(body.norm_landmarks[:self.nb_kps+2,:2], axis=0)
-            lm_xy = np.squeeze(cv2.transform(lm_xy, mat))  
+            lm_xy = np.squeeze(cv2.transform(lm_xy, mat))
             # A segment of length 1 in the coordinates system of body bounding box takes body.rect_w_a pixels in the
             # original image. Then we arbitrarily divide by 4 for a more realistic appearance.
             lm_z = body.norm_landmarks[:self.nb_kps+2,2:3] * body.rect_w_a / 4
@@ -360,12 +360,12 @@ class BlazeposeDepthai:
                 body.landmarks[:,0] -= self.pad_w
                 for i in range(len(body.rect_points)):
                     body.rect_points[i][0] -= self.pad_w
-                
-                
+
+
     def next_frame(self):
 
         self.fps.update()
-           
+
         if self.input_type == "rgb":
             in_video = self.q_video.get()
             video_frame = in_video.getCvFrame()
@@ -407,7 +407,7 @@ class BlazeposeDepthai:
 
             # Get pose detection
             inference = self.q_pd_out.get()
-            if self.input_type != "rgb": 
+            if self.input_type != "rgb":
                 pd_rtrip_time = now() - pd_rtrip_time
                 self.glob_pd_rtrip_time += pd_rtrip_time
             body = self.pd_postprocess(inference)
@@ -422,11 +422,11 @@ class BlazeposeDepthai:
         if body:
             frame_nn = mpu.warp_rect_img(body.rect_points, square_frame, self.lm_input_length, self.lm_input_length)
             frame_nn = frame_nn / 255.
-            nn_data = dai.NNData()   
+            nn_data = dai.NNData()
             nn_data.setLayer("input_1", to_planar(frame_nn, (self.lm_input_length, self.lm_input_length)))
             lm_rtrip_time = now()
             self.q_lm_in.send(nn_data)
-            
+
             # Get landmarks
             inference = self.q_lm_out.get()
             lm_rtrip_time = now() - lm_rtrip_time
@@ -439,7 +439,7 @@ class BlazeposeDepthai:
                 if self.smoothing: self.filter.reset()
             else:
                 self.use_previous_landmarks = True
-            
+
         else:
             self.use_previous_landmarks = False
             if self.smoothing: self.filter.reset()
@@ -457,4 +457,4 @@ class BlazeposeDepthai:
             if self.input_type != "rgb" and self.nb_pd_inferences != 0: print(f"Pose detection round trip   : {self.glob_pd_rtrip_time/self.nb_pd_inferences*1000:.1f} ms")
             if self.nb_lm_inferences != 0:  print(f"Landmark round trip         : {self.glob_lm_rtrip_time/self.nb_lm_inferences*1000:.1f} ms")
 
-           
+
